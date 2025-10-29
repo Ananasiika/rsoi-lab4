@@ -91,12 +91,30 @@ jobs:
           echo "------------------Deploy services------------------"
           helm delete tickets --namespace ananasiika --ignore-not-found
           helm install -n ananasiika tickets ./services
+
+      - name: Install Ingress Controller
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=180s
+
+      - name: Deploy Ingress
+        run: |
+          kubectl apply -f k8s/ingress.yaml
       
       - name: Wait 60s
         uses: jakejarvis/wait-action@master
         with:
           time: '60s'
-      
+
+      - name: Check Ingress
+        run: |
+          sleep 30
+          kubectl get ingress -n ananasiika
+          echo "Ingress установлен. Приложение доступно через внешний IP выше"
+          
       - name: All resources from namespace ananasiika
         run: |
           kubectl get all -n ananasiika
