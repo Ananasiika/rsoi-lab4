@@ -102,7 +102,7 @@ jobs:
           helm version
 
       - name: Get K8s cluster credentials
-        run: yc managed-kubernetes cluster get-credentials ${{ secrets.YC_CLUSTER_ID }} --external
+        run: yc managed-kubernetes cluster get-credentials --id ${{ secrets.YC_CLUSTER_ID }} --external
 
       - name: Create namespace if not exists
         run: kubectl create namespace test --dry-run=client -o yaml | kubectl apply -f -
