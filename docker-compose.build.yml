@@ -1,25 +1,24 @@
-version: "3.8"
 services:
   bonus_service:
     build:
-      context: .
-      dockerfile: src/BonusService/Dockerfile
+      context: src
+      dockerfile: BonusService/Dockerfile
     image: ${DOCKERHUB_USERNAME}/bonus-service:latest
 
   flight_service:
     build:
-      context: .
-      dockerfile: src/FlightService/Dockerfile
+      context: src
+      dockerfile: FlightService/Dockerfile
     image: ${DOCKERHUB_USERNAME}/flight-service:latest
 
   ticket_service:
     build:
-      context: .
-      dockerfile: src/TicketService/Dockerfile
+      context: src
+      dockerfile: TicketService/Dockerfile
     image: ${DOCKERHUB_USERNAME}/ticket-service:latest
 
   gateway_service:
     build:
-      context: .
-      dockerfile: src/GatewayService/Dockerfile
+      context: src
+      dockerfile: GatewayService/Dockerfile
     image: ${DOCKERHUB_USERNAME}/gateway-service:latest
