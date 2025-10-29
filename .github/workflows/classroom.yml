@@ -94,11 +94,14 @@ jobs:
 
       - name: Install Ingress Controller
         run: |
+          # Устанавливаем Ingress Controller
           kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
+          
+          # Ждем готовности
           kubectl wait --namespace ingress-nginx \
             --for=condition=ready pod \
             --selector=app.kubernetes.io/component=controller \
-            --timeout=180s
+            --timeout=300s
 
       - name: Deploy Ingress
         run: |
@@ -111,10 +114,11 @@ jobs:
 
       - name: Check Ingress
         run: |
-          sleep 30
           kubectl get ingress -n ananasiika
+          sleep 30
+          kubectl get ingress -n ananasiika -o wide
           echo "Ingress установлен. Приложение доступно через внешний IP выше"
-          
+
       - name: All resources from namespace ananasiika
         run: |
           kubectl get all -n ananasiika
