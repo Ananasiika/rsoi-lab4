@@ -68,87 +68,111 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up k8s
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.16.4'
+
       - name: Install Yandex Cloud CLI
         run: |
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
           echo "${HOME}/yandex-cloud/bin" >> $GITHUB_PATH
-          source ~/.bashrc
 
-      - name: Configure Yandex Cloud
+      - name: Configure Yandex Cloud and find service account
+        env:
+          YC_PRIVATE_KEY: ${{ secrets.YC_PRIVATE_KEY }}
         run: |
-          # Создаем конфиг файл для аутентификации
-          mkdir -p ~/.config/yandex-cloud
-          cat > ~/.config/yandex-cloud/config.yaml << EOF
-          current: default
-          profiles:
-            default:
-              service-account-key:
-                id: ${{ secrets.YC_KEY_ID }}
-                service_account_id: ${{ secrets.YC_KEY_ID }}
-                private_key: |
-                  $(echo "${{ secrets.YC_PRIVATE_KEY }}" | sed 's/\\n/\n/g')
-              folder-id: ${{ secrets.YC_FOLDER_ID }}
+          # Создаем временный ключевой файл
+          echo "$YC_PRIVATE_KEY" > temp-key.pem
+          
+          # Пробуем разные форматы ключа
+          if grep -q "BEGIN PRIVATE KEY" temp-key.pem; then
+            echo "✓ Key is in PKCS8 format"
+            cp temp-key.pem private-key.pem
+          elif grep -q "BEGIN RSA PRIVATE KEY" temp-key.pem; then
+            echo "✓ Key is in PKCS1 format" 
+            cp temp-key.pem private-key.pem
+          else
+            echo "✗ Key missing headers, adding PKCS8 format"
+            cat > private-key.pem << EOF
+              -----BEGIN PRIVATE KEY-----
+              $(echo "$YC_PRIVATE_KEY" | sed 's/\\n/\n/g')
+              -----END PRIVATE KEY-----
+              EOF
+                      fi
+          
+          # Настраиваем YC CLI
+          yc config set service-account-key private-key.pem
+          yc config set folder-id ${{ secrets.YC_FOLDER_ID }}
+          
+          # Получаем список сервисных аккаунтов и берем первый
+          echo "=== Getting service accounts ==="
+          yc iam service-account list
+          
+          # Сохраняем ID первого сервисного аккаунта
+          YC_SERVICE_ACCOUNT_ID=$(yc iam service-account list --format=json | jq -r '.[0].id')
+          echo "Using service account ID: $YC_SERVICE_ACCOUNT_ID"
+          echo "YC_SERVICE_ACCOUNT_ID=$YC_SERVICE_ACCOUNT_ID" >> $GITHUB_ENV
+
+      - name: Deploy to Kubernetes
+        env:
+          YC_PRIVATE_KEY: ${{ secrets.YC_PRIVATE_KEY }}
+        run: |
+          # Создаем полный JSON ключ
+          cat > sa-key.json << EOF
+          {
+            "id": "${{ secrets.YC_KEY_ID }}",
+            "service_account_id": "$YC_SERVICE_ACCOUNT_ID", 
+            "private_key": "$(echo "$YC_PRIVATE_KEY" | sed 's/\\n/\\\\n/g')"
+          }
           EOF
+          
+          # Используем JSON ключ
+          yc config set service-account-key sa-key.json
+          yc config set folder-id ${{ secrets.YC_FOLDER_ID }}
+          
+          # Получаем credentials кластера
+          yc managed-kubernetes cluster get-credentials ${{ secrets.YC_CLUSTER_ID }} --external
 
-      - name: Setup kubectl
-        run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-          kubectl version --client
+          # Создаем namespace
+          kubectl create namespace test --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Setup Helm
-        run: |
-          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-          helm version
-
-      - name: Get K8s cluster credentials
-        run: |
-          yc managed-kubernetes cluster list
-          yc managed-kubernetes cluster get-credentials --id cateflpqpg8ptfin5mpj --external
-
-      - name: Create namespace if not exists
-        run: kubectl create namespace test --dry-run=client -o yaml | kubectl apply -f -
-
-      - name: Create PostgreSQL ConfigMap
-        run: kubectl apply -f k8s/postgres-configmap.yaml -n test
-
-      - name: Deploy PostgreSQL
-        run: |
+          # Деплой PostgreSQL
           helm repo add bitnami https://charts.bitnami.com/bitnami
-          helm repo update
           helm upgrade --install postgresql bitnami/postgresql -n test \
             --set auth.postgresPassword=postgres \
             --set auth.database=postgres \
-            --set primary.initdb.scriptsConfigMap=postgres-init-scripts
+            --set primary.initdb.scripts."init-multiple-dbs\.sql"="$(cat postgres/init-multiple-dbs.sql)"
 
-      - name: Wait for PostgreSQL to be ready
-        run: kubectl wait -n test --for=condition=ready pod -l app.kubernetes.io/name=postgresql --timeout=300s
+          # Ждем PostgreSQL
+          sleep 30
 
-      - name: Deploy applications with Helm
-        run: |
+          # Деплой микросервисов
           helm upgrade --install bonus-service ./k8s/charts/microservice -n test \
             --set name=bonus-service \
             --set image.repository=${{ secrets.DOCKERHUB_USERNAME }}/bonus-service \
             --set image.tag=latest \
             --set service.port=8050 \
-            --set database.name=privileges \
-            --set database.host=postgresql-postgresql
+            --set database.name=privileges
 
           helm upgrade --install flight-service ./k8s/charts/microservice -n test \
             --set name=flight-service \
             --set image.repository=${{ secrets.DOCKERHUB_USERNAME }}/flight-service \
             --set image.tag=latest \
             --set service.port=8060 \
-            --set database.name=flights \
-            --set database.host=postgresql-postgresql
+            --set database.name=flights
 
           helm upgrade --install ticket-service ./k8s/charts/microservice -n test \
             --set name=ticket-service \
             --set image.repository=${{ secrets.DOCKERHUB_USERNAME }}/ticket-service \
             --set image.tag=latest \
             --set service.port=8070 \
-            --set database.name=tickets \
-            --set database.host=postgresql-postgresql
+            --set database.name=tickets
 
           helm upgrade --install gateway-service ./k8s/charts/microservice -n test \
             --set name=gateway-service \
@@ -157,53 +181,20 @@ jobs:
             --set service.port=8080 \
             --set database.enabled=false
 
-      - name: Deploy Ingress
-        run: kubectl apply -f k8s/ingress.yaml -n test
+          # Деплой Ingress
+          kubectl apply -f k8s/ingress.yaml -n test
 
-      - name: Wait for services to be ready
-        run: |
-          # Ждем немного перед проверкой
+          # Проверка
           sleep 30
-          kubectl wait -n test --for=condition=Ready pod -l app=gateway-service --timeout=300s
-          kubectl wait -n test --for=condition=Ready pod -l app=bonus-service --timeout=300s
-          kubectl wait -n test --for=condition=Ready pod -l app=flight-service --timeout=300s
-          kubectl wait -n test --for=condition=Ready pod -l app=ticket-service --timeout=300s
+          kubectl get all -n test
 
-      - name: Check deployment status
-        run: |
-          echo "=== Pods status ==="
-          kubectl get pods -n test
-          echo "=== Services ==="
-          kubectl get services -n test
-          echo "=== Ingress ==="
-          kubectl get ingress -n test
-
-  autograding:
-    name: AutogradingW
-    runs-on: ubuntu-latest
-    needs: deploy
-    if: github.ref == 'refs/heads/master'
-    
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Kubernetes tools
-        uses: yc-actions/yc-kubernetes-tool-installer@v1
-
-      - name: Authenticate in Yandex Cloud
-        uses: yc-actions/yc-cli@v1
+      - name: Run API Tests
+        uses: matt-ball/newman-action@master
         with:
-          yc-key-id: ${{ secrets.YC_KEY_ID }}
-          yc-private-key: ${{ secrets.YC_PRIVATE_KEY }}
-          yc-folder-id: ${{ secrets.YC_FOLDER_ID }}
-
-      - name: Get K8s cluster credentials
-        run: yc managed-kubernetes cluster get-credentials ${{ secrets.YC_CLUSTER_ID }} --external
-
-      - name: Run tests
-        run: |
-          chmod +x ./scripts/test-script.sh
-          ./scripts/test-script.sh v1 gateway-service test
+          collection: v1/postman/collection.json
+          environment: v1/postman/environment.json
+          delayRequest: 100
+          reporters: '[ "cli" ]'
 
       - name: Autograding
         uses: education/autograding@v1
