@@ -5,25 +5,21 @@ services:
       context: .
       dockerfile: src/BonusService/Dockerfile
     image: ${DOCKERHUB_USERNAME}/bonus-service:latest
-    restart: unless-stopped
 
   flight_service:
     build:
       context: .
       dockerfile: src/FlightService/Dockerfile
     image: ${DOCKERHUB_USERNAME}/flight-service:latest
-    restart: unless-stopped
 
   ticket_service:
     build:
       context: .
       dockerfile: src/TicketService/Dockerfile
     image: ${DOCKERHUB_USERNAME}/ticket-service:latest
-    restart: unless-stopped
 
   gateway_service:
     build:
       context: .
       dockerfile: src/GatewayService/Dockerfile
     image: ${DOCKERHUB_USERNAME}/gateway-service:latest
-    restart: unless-stopped
