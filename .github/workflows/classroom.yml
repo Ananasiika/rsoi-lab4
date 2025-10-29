@@ -84,11 +84,9 @@ jobs:
           kubectl get namespace
           
           cd k8s
-          echo "------------------Deploy DB------------------"
           helm delete postgres --namespace ananasiika --ignore-not-found
           helm install -n ananasiika postgres ./postgres
           
-          echo "------------------Deploy services------------------"
           helm delete tickets --namespace ananasiika --ignore-not-found
           helm install -n ananasiika tickets ./services
 

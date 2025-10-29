@@ -42,6 +42,9 @@ gateway:
     image: ananasiika/gateway-service:latest
     isGateway: true
     env:
-      Services__FlightService: "http://flights"   
-      Services__BonusService: "http://bonus"    
-      Services__TicketService: "http://tickets" 
+      FLIGHTS_SERVICE_HOST: flights.ananasiika.svc.cluster.local
+      FLIGHTS_SERVICE_PORT: 8060
+      BONUS_SERVICE_HOST: bonus.ananasiika.svc.cluster.local
+      BONUS_SERVICE_PORT: 8050
+      TICKET_SERVICE_HOST: tickets.ananasiika.svc.cluster.local
+      TICKET_SERVICE_PORT: 8070
