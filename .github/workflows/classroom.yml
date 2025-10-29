@@ -99,12 +99,12 @@ jobs:
             cp temp-key.pem private-key.pem
           else
             echo "✗ Key missing headers, adding PKCS8 format"
-            cat > private-key.pem << EOF
-              -----BEGIN PRIVATE KEY-----
-              $(echo "$YC_PRIVATE_KEY" | sed 's/\\n/\n/g')
-              -----END PRIVATE KEY-----
-              EOF
-                      fi
+          cat > private-key.pem << 'EOF'
+-----BEGIN PRIVATE KEY-----
+$(echo "$YC_PRIVATE_KEY" | sed 's/\\n/\n/g')
+-----END PRIVATE KEY-----
+EOF
+        fi
           
           # Настраиваем YC CLI
           yc config set service-account-key private-key.pem
