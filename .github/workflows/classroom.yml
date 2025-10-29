@@ -152,13 +152,13 @@ jobs:
           
           # Проверяем доступность сервисов используя те же URL что и в конфигурации
           kubectl exec -n ananasiika deployment/gateway -- \
-            sh -c 'curl -s http://flights:8060/manage/health && echo " - Flights OK" || echo " - Flights FAILED"'
+            sh -c 'curl -s http://flights/manage/health && echo " - Flights OK" || echo " - Flights FAILED"'
           
           kubectl exec -n ananasiika deployment/gateway -- \
-            sh -c 'curl -s http://bonus:8050/manage/health && echo " - Bonus OK" || echo " - Bonus FAILED"'
+            sh -c 'curl -s http://bonus/manage/health && echo " - Bonus OK" || echo " - Bonus FAILED"'
             
           kubectl exec -n ananasiika deployment/gateway -- \
-            sh -c 'curl -s http://tickets:8070/manage/health && echo " - Tickets OK" || echo " - Tickets FAILED"'
+            sh -c 'curl -s http://tickets/manage/health && echo " - Tickets OK" || echo " - Tickets FAILED"'
 
 
       - name: Run API Tests

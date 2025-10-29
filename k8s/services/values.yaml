@@ -42,6 +42,6 @@ gateway:
     image: ananasiika/gateway-service:latest
     isGateway: true
     env:
-      Services__FlightService: "http://flights:8060"   
-      Services__BonusService: "http://bonus:8050"    
-      Services__TicketService: "http://tickets:8070" 
+      Services__FlightService: "http://flights"   
+      Services__BonusService: "http://bonus"    
+      Services__TicketService: "http://tickets" 
