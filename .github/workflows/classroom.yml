@@ -115,9 +115,23 @@ jobs:
       - name: Check Ingress
         run: |
           kubectl get ingress -n ananasiika
-          sleep 30
           kubectl get ingress -n ananasiika -o wide
           echo "Ingress установлен. Приложение доступно через внешний IP выше"
+          echo "=== Detailed Ingress Debug ==="
+    
+          # Проверить Ingress Controller
+          kubectl get pods -n ingress-nginx
+          kubectl get svc -n ingress-nginx -o wide
+          
+          # Проверить события
+          kubectl get events -n ingress-nginx --sort-by=.lastTimestamp
+          kubectl get events -n ananasiika --sort-by=.lastTimestamp
+          
+          # Детали Ingress
+          kubectl describe ingress gateway-ingress -n ananasiika
+          
+          # Проверить логи Ingress Controller
+          kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=50
 
       - name: All resources from namespace ananasiika
         run: |
