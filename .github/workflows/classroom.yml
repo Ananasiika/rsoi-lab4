@@ -89,7 +89,12 @@ jobs:
 
       - name: Deploy applications
         run: |
-          kubectl apply -f k8s/ -n test
+          # Применяем каждый файл отдельно
+          kubectl apply -f k8s/bonus-service.yaml -n test
+          kubectl apply -f k8s/flight-service.yaml -n test
+          kubectl apply -f k8s/ticket-service.yaml -n test
+          kubectl apply -f k8s/gateway-service.yaml -n test
+          kubectl apply -f k8s/ingress.yaml -n test
 
       - name: Setup Ingress
         run: |

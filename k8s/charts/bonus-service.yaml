@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bonus-service
+  labels:
+    app: bonus-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bonus-service
+  template:
+    metadata:
+      labels:
+        app: bonus-service
+    spec:
+      containers:
+      - name: bonus-service
+        image: ${{ secrets.DOCKERHUB_USERNAME }}/bonus-service:latest
+        ports:
+        - containerPort: 8050
+        env:
+        - name: ConnectionStrings__DefaultConnection
+          value: "Host=postgresql;Port=5432;Database=privileges;Username=postgres;Password=postgres"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bonus-service
+spec:
+  selector:
+    app: bonus-service
+  ports:
+  - port: 8050
+    targetPort: 8050
