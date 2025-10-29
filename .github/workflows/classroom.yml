@@ -150,18 +150,26 @@ jobs:
           kubectl describe svc -n ananasiika
           kubectl get pods -n ananasiika -o wide
 
-      - name: Test Service DNS Resolution
+      - name: Test DNS Resolution
         run: |
-          echo "=== Testing DNS resolution from gateway pod ==="
+          echo "=== Testing DNS resolution ==="
           
-          kubectl exec -n ananasiika deployment/gateway -- \
-            sh -c 'nslookup flights 2>/dev/null && echo " - Flights DNS OK" || echo " - Flights DNS FAILED"'
-          
-          kubectl exec -n ananasiika deployment/gateway -- \
-            sh -c 'nslookup bonus 2>/dev/null && echo " - Bonus DNS OK" || echo " - Bonus DNS FAILED"'
-            
-          kubectl exec -n ananasiika deployment/gateway -- \
-            sh -c 'nslookup tickets 2>/dev/null && echo " - Tickets DNS OK" || echo " - Tickets DNS FAILED"'
+          kubectl run -n ananasiika dns-test --image=busybox -it --rm --restart=Never -- \
+            sh -c '
+              echo "Testing flights service..."
+              nslookup flights.ananasiika.svc.cluster.local
+              
+              echo "Testing bonus service..."
+              nslookup bonus.ananasiika.svc.cluster.local
+              
+              echo "Testing tickets service..."
+              nslookup tickets.ananasiika.svc.cluster.local
+              
+              echo "Testing short names..."
+              nslookup flights
+              nslookup bonus
+              nslookup tickets
+            '
       
       - name: Run API Tests
         uses: matt-ball/newman-action@master
