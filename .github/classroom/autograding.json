@@ -2,7 +2,7 @@
   "tests": [
     {
       "name": "Run Test Script",
-      "setup": "",
+      "setup": "export INGRESS_IP=$(minikube ip)",
       "run": "./scripts/test-script.sh v1 gateway ananasiika",
       "input": "",
       "output": "",

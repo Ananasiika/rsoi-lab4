@@ -92,12 +92,11 @@ jobs:
           helm delete tickets --namespace ananasiika --ignore-not-found
           helm install -n ananasiika tickets ./services
 
-      - name: Install Ingress Controller
+      - name: Enable Ingress in Minikube
         run: |
-          # Устанавливаем Ingress Controller
-          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
+          minikube addons enable ingress
           
-          # Ждем готовности
+          # Ждем готовности Ingress Controller
           kubectl wait --namespace ingress-nginx \
             --for=condition=ready pod \
             --selector=app.kubernetes.io/component=controller \
@@ -106,36 +105,56 @@ jobs:
       - name: Deploy Ingress
         run: |
           kubectl apply -f k8s/ingress.yaml
-      
-      - name: Wait 60s
+
+      - name: Setup Minikube Tunnel and Get IP
+        run: |
+          # Запускаем tunnel в фоне
+          minikube tunnel &
+          TUNNEL_PID=$!
+          echo "TUNNEL_PID=$TUNNEL_PID" >> $GITHUB_ENV
+          
+          # Ждем запуска tunnel
+          sleep 30
+          
+          # Получаем IP Minikube
+          MINIKUBE_IP=$(minikube ip)
+          echo "MINIKUBE_IP=$MINIKUBE_IP" >> $GITHUB_ENV
+          echo "Minikube IP: $MINIKUBE_IP"
+          
+          # Проверяем Ingress
+          kubectl get ingress -n ananasiika -o wide
+
+      - name: Wait for Services
         uses: jakejarvis/wait-action@master
         with:
           time: '60s'
 
-      - name: Check Ingress
+      - name: Debug Resources
         run: |
-          kubectl get ingress -n ananasiika
-          kubectl get ingress -n ananasiika -o wide
-          echo "Ingress установлен. Приложение доступно через внешний IP выше"
-          echo "=== Detailed Ingress Debug ==="
-    
-          # Проверить Ingress Controller
-          kubectl get pods -n ingress-nginx
-          kubectl get svc -n ingress-nginx -o wide
+          echo "=== All resources in namespace ananasiika ==="
+          kubectl get all -n ananasiika
           
-          # Проверить события
-          kubectl get events -n ingress-nginx --sort-by=.lastTimestamp
-          kubectl get events -n ananasiika --sort-by=.lastTimestamp
-          
-          # Детали Ingress
+          echo "=== Ingress details ==="
           kubectl describe ingress gateway-ingress -n ananasiika
           
-          # Проверить логи Ingress Controller
-          kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=50
+          echo "=== Services ==="
+          kubectl get svc -n ananasiika
+          
+          echo "=== Pods status ==="
+          kubectl get pods -n ananasiika -o wide
+          
+          echo "=== Ingress Controller logs ==="
+          kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=20
 
-      - name: All resources from namespace ananasiika
+      - name: Check API 
+        env:
+          INGRESS_IP: ${{ env.MINIKUBE_IP }}
         run: |
-          kubectl get all -n ananasiika
+          echo "Running tests against: http://${{ env.MINIKUBE_IP }}"
+          
+          # Проверяем доступность сервиса
+          curl -v http://${{ env.MINIKUBE_IP }}/manage/health || echo "Service not immediately available"
+
 
       - name: Run API Tests
         uses: matt-ball/newman-action@master
@@ -144,6 +163,13 @@ jobs:
           environment: v1/postman/environment.json
           delayRequest: 100
           reporters: '[ "cli" ]'
+
+      - name: Cleanup Tunnel
+        if: always()
+        run: |
+          if [ ! -z "$TUNNEL_PID" ]; then
+            kill $TUNNEL_PID 2>/dev/null || true
+          fi
 
       - name: Autograding
         uses: education/autograding@v1

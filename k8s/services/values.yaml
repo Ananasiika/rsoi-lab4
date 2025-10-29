@@ -46,6 +46,6 @@ gateway:
       FLIGHTS_SERVICE_PORT: 8060
       BONUS_SERVICE_HOST: bonus.ananasiika.svc.cluster.local
       BONUS_SERVICE_PORT: 8050
-      TICKET_SERVICE_HOST: ticket.ananasiika.svc.cluster.local
+      TICKET_SERVICE_HOST: tickets.ananasiika.svc.cluster.local
       TICKET_SERVICE_PORT: 8070
       
