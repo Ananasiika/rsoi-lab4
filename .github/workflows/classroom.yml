@@ -146,14 +146,19 @@ jobs:
           echo "=== Ingress Controller logs ==="
           kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=20
 
-      - name: Check API 
-        env:
-          INGRESS_IP: ${{ env.MINIKUBE_IP }}
+      - name: Test Service Connectivity from Gateway
         run: |
-          echo "Running tests against: http://${{ env.MINIKUBE_IP }}"
+          echo "=== Testing service connectivity from gateway pod ==="
           
-          # Проверяем доступность сервиса
-          curl -v http://${{ env.MINIKUBE_IP }}/manage/health || echo "Service not immediately available"
+          # Проверяем доступность сервисов используя те же URL что и в конфигурации
+          kubectl exec -n ananasiika deployment/gateway -- \
+            sh -c 'curl -s http://flights:8060/manage/health && echo " - Flights OK" || echo " - Flights FAILED"'
+          
+          kubectl exec -n ananasiika deployment/gateway -- \
+            sh -c 'curl -s http://bonus:8050/manage/health && echo " - Bonus OK" || echo " - Bonus FAILED"'
+            
+          kubectl exec -n ananasiika deployment/gateway -- \
+            sh -c 'curl -s http://tickets:8070/manage/health && echo " - Tickets OK" || echo " - Tickets FAILED"'
 
 
       - name: Run API Tests

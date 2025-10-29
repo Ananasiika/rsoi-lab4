@@ -35,17 +35,13 @@ flights:
       DATA_BASE_HOST: postgres
 
 gateway:
-   service:
+  service:
     type: NodePort
     port: 8080
     nodePort: 30000
     image: ananasiika/gateway-service:latest
     isGateway: true
     env:
-      FLIGHTS_SERVICE_HOST: flights.ananasiika.svc.cluster.local
-      FLIGHTS_SERVICE_PORT: 8060
-      BONUS_SERVICE_HOST: bonus.ananasiika.svc.cluster.local
-      BONUS_SERVICE_PORT: 8050
-      TICKET_SERVICE_HOST: tickets.ananasiika.svc.cluster.local
-      TICKET_SERVICE_PORT: 8070
-      
+      Services__FlightService: "http://flights:8060"   
+      Services__BonusService: "http://bonus:8050"    
+      Services__TicketService: "http://tickets:8070" 
