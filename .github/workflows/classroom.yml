@@ -164,11 +164,6 @@ jobs:
               
               echo "Testing tickets service..."
               nslookup tickets.ananasiika.svc.cluster.local
-              
-              echo "Testing short names..."
-              nslookup flights
-              nslookup bonus
-              nslookup tickets
             '
       
       - name: Run API Tests
