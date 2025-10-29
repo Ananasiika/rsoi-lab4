@@ -146,21 +146,23 @@ jobs:
           echo "=== Ingress Controller logs ==="
           kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=20
 
-      - name: Test Service Connectivity from Gateway
+          kubectl get endpoints -n ananasiika
+          kubectl describe svc -n ananasiika
+          kubectl get pods -n ananasiika -o wide
+
+      - name: Test Service DNS Resolution
         run: |
-          echo "=== Testing service connectivity from gateway pod ==="
-          
-          # Проверяем доступность сервисов используя те же URL что и в конфигурации
-          kubectl exec -n ananasiika deployment/gateway -- \
-            sh -c 'curl -s http://flights/manage/health && echo " - Flights OK" || echo " - Flights FAILED"'
+          echo "=== Testing DNS resolution from gateway pod ==="
           
           kubectl exec -n ananasiika deployment/gateway -- \
-            sh -c 'curl -s http://bonus/manage/health && echo " - Bonus OK" || echo " - Bonus FAILED"'
+            sh -c 'nslookup flights 2>/dev/null && echo " - Flights DNS OK" || echo " - Flights DNS FAILED"'
+          
+          kubectl exec -n ananasiika deployment/gateway -- \
+            sh -c 'nslookup bonus 2>/dev/null && echo " - Bonus DNS OK" || echo " - Bonus DNS FAILED"'
             
           kubectl exec -n ananasiika deployment/gateway -- \
-            sh -c 'curl -s http://tickets/manage/health && echo " - Tickets OK" || echo " - Tickets FAILED"'
-
-
+            sh -c 'nslookup tickets 2>/dev/null && echo " - Tickets DNS OK" || echo " - Tickets DNS FAILED"'
+      
       - name: Run API Tests
         uses: matt-ball/newman-action@master
         with:
