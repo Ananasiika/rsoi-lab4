@@ -24,19 +24,19 @@ builder.Services.AddHostedService<RetryQueue>(provider =>
 // Register HTTP clients
 builder.Services.AddHttpClient<IFlightClient, FlightClient>(client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["Services:FlightService"] ?? "http://flights.ananasiika.svc.cluster.local:8060");
+    client.BaseAddress = new Uri("http://flights.ananasiika.svc.cluster.local:8060");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 builder.Services.AddHttpClient<IBonusClient, BonusClient>(client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["Services:BonusService"] ?? "http://bonus.ananasiika.svc.cluster.local:8050" );
+    client.BaseAddress = new Uri("http://bonus.ananasiika.svc.cluster.local:8050" );
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 builder.Services.AddHttpClient<ITicketClient, TicketClient>(client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["Services:TicketService"] ?? "http://tickets.ananasiika.svc.cluster.local:8070");
+    client.BaseAddress = new Uri("http://tickets.ananasiika.svc.cluster.local:8070");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
