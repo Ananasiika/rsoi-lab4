@@ -77,34 +77,29 @@ jobs:
           kubectl get pods -A
 
       - name: Create Namespace
-        run: kubectl create namespace test 
+        run: kubectl create namespace ananasiika 
 
-      - name: Deploy PostgreSQL
+      - name: Deploy DB and services
         run: |
-          helm repo add bitnami https://charts.bitnami.com/bitnami
-          helm upgrade --install postgresql bitnami/postgresql -n test \
-            --set auth.postgresPassword=postgres \
-            --set auth.database=postgres \
-            --set primary.initdb.scripts."init-multiple-dbs\.sql"="$(cat postgres/init-multiple-dbs.sql)"
-
-      - name: Deploy applications
+          kubectl get namespace
+          
+          cd k8s
+          echo "------------------Deploy DB------------------"
+          helm delete postgres --namespace ananasiika --ignore-not-found
+          helm install -n ananasiika postgres ./postgres
+          
+          echo "------------------Deploy services------------------"
+          helm delete tickets --namespace ananasiika --ignore-not-found
+          helm install -n ananasiika tickets ./services
+      
+      - name: Wait 60s
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '60s'
+      
+      - name: All resources from namespace ananasiika
         run: |
-          # Применяем каждый файл отдельно
-          kubectl apply -f k8s/bonus-service.yaml -n test
-          kubectl apply -f k8s/flight-service.yaml -n test
-          kubectl apply -f k8s/ticket-service.yaml -n test
-          kubectl apply -f k8s/gateway-service.yaml -n test
-          kubectl apply -f k8s/ingress.yaml -n test
-
-      - name: Setup Ingress
-        run: |
-          minikube addons enable ingress
-          kubectl apply -f k8s/ingress.yaml -n test
-
-      - name: Wait for services
-        run: |
-          sleep 30
-          kubectl get all -n test
+          kubectl get all -n ananasiika
 
       - name: Run API Tests
         uses: matt-ball/newman-action@master
