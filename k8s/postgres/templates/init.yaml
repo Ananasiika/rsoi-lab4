@@ -8,13 +8,14 @@ data:
     CREATE DATABASE tickets;
     CREATE DATABASE flights; 
     CREATE DATABASE privileges;
-
     -- Даем права
     GRANT ALL PRIVILEGES ON DATABASE tickets TO program;
     GRANT ALL PRIVILEGES ON DATABASE flights TO program;
     GRANT ALL PRIVILEGES ON DATABASE privileges TO program;
 
     \c tickets;
+    GRANT ALL ON SCHEMA public TO program;
+    ALTER SCHEMA public OWNER TO program;
     CREATE TABLE ticket
     (
         id            SERIAL PRIMARY KEY,
@@ -25,8 +26,11 @@ data:
         status        VARCHAR(20) NOT NULL
             CHECK (status IN ('PAID', 'CANCELED'))
     );
+    ALTER TABLE ticket OWNER TO program;
 
     \c flights;
+    GRANT ALL ON SCHEMA public TO program;
+    ALTER SCHEMA public OWNER TO program;
     CREATE TABLE airport
     (
         id      SERIAL PRIMARY KEY,
@@ -45,6 +49,9 @@ data:
         price           INT                      NOT NULL
     );
 
+    ALTER TABLE airport OWNER TO program;
+    ALTER TABLE flight OWNER TO program;
+
     INSERT INTO public.airport(id, name, city, country) VALUES 
     (1, 'Шереметьево', 'Москва', 'Россия'),
     (2, 'Пулково', 'Санкт-Петербург', 'Россия');
@@ -54,6 +61,8 @@ data:
         VALUES (1, 'AFL031', '2021-10-08 20:00', 2, 1, 1500);
 
     \c privileges;
+    GRANT ALL ON SCHEMA public TO program;
+    ALTER SCHEMA public OWNER TO program;
     CREATE TABLE privilege
     (
         id       SERIAL PRIMARY KEY,
@@ -73,3 +82,5 @@ data:
         operation_type VARCHAR(20) NOT NULL
             CHECK (operation_type IN ('FILL_IN_BALANCE', 'DEBIT_THE_ACCOUNT'))
     );
+    ALTER TABLE privilege OWNER TO program;
+    ALTER TABLE privilege_history OWNER TO program;

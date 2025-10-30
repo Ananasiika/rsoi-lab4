@@ -4,7 +4,7 @@
 	"values": [
 		{
 			"key": "baseUrl",
-			"value": "http://192.168.49.2"
+			"value": "http://192.168.49.2:30000"
 		},
 		{
 			"key": "flightNumber",
