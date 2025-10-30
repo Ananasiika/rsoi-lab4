@@ -85,7 +85,21 @@ jobs:
           
           cd k8s
           helm delete postgres --namespace ananasiika --ignore-not-found
+          kubectl delete pvc -n ananasiika postgres-pvc --ignore-not-found
+          
+          # Ждем
+          sleep 10
+          
+          # Переустанавливаем
           helm install -n ananasiika postgres ./postgres
+          
+          # Ждем инициализации
+          sleep 30
+          
+          # Проверяем все базы
+          echo "=== Checking all databases ==="
+          kubectl exec -n ananasiika deployment/postgres -- \
+            psql -U postgres -l
           
           helm delete services --namespace ananasiika --ignore-not-found
           helm install -n ananasiika services ./services
