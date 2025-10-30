@@ -238,67 +238,12 @@ jobs:
           kubectl get endpoints -n ananasiika
           kubectl describe svc -n ananasiika
           kubectl get pods -n ananasiika -o wide
-
-      - name: Test Bonus Service Stop/Start
-        run: |
-          echo "=== Testing Bonus Service resilience ==="
-          
-          # Останавливаем bonus
-          echo "Stopping bonus service..."
-          kubectl scale deployment bonus -n ananasiika --replicas 0
-          sleep 10
-          echo "Bonus pods after stop:"
-          kubectl get pods -n ananasiika -l service=bonus
-          
-          # Запускаем bonus
-          echo "Starting bonus service..."
-          kubectl scale deployment bonus -n ananasiika --replicas 1
-          kubectl wait --for=condition=ready pod -l service=bonus -n ananasiika --timeout=60s
-          echo "Bonus pods after start:"
-          kubectl get pods -n ananasiika -l service=bonus
-          
-          echo "✅ Bonus service stop/start test completed"
             
       - name: Run Test Script
         run: |
           echo "=== Running test script ==="
           chmod +x ./scripts/test-script.sh
           ./scripts/test-script.sh v1 bonus ananasiika
-      - name: Check Logs
-        if: always()
-        run: |
-          echo "=== Getting logs from ALL services ==="
-          
-          # Получаем все поды в неймспейсе
-          kubectl get pods -n ananasiika -o wide
-          
-          echo "================================================================================"
-          echo "=== LOGS USING SERVICE LABEL ==="
-          echo "================================================================================"
-          
-          SERVICES="gateway flights bonus tickets"
-          
-          for service in $SERVICES; do
-            echo "--- Service: $service ---"
-            kubectl logs -n ananasiika -l service="$service" --prefix=true --tail=100 2>/dev/null || \
-            echo "No logs found for service: $service"
-            echo ""
-          done
-          
-          # Логи postgres отдельно
-          echo "--- Service: postgres ---"
-          kubectl logs -n ananasiika -l app=postgres --prefix=true --tail=100 2>/dev/null || \
-          echo "No logs found for postgres"
-          echo ""
-          
-          echo "=== Getting logs from ALL services ==="
-          
-          # Получаем логи для каждого пода по имени
-          for pod in $(kubectl get pods -n ananasiika -o jsonpath='{.items[*].metadata.name}'); do
-            echo "--- Pod: $pod ---"
-            kubectl logs -n ananasiika $pod --tail=100 --prefix=true
-            echo ""
-          done
 
       - name: Cleanup Tunnel
         if: always()
