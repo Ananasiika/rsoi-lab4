@@ -14,7 +14,7 @@ public class TicketsController : ControllerBase
     {
         _ticketService = ticketService;
     }
-
+    
     [HttpGet("manage/health")]
     public IActionResult Health()
     {
@@ -30,19 +30,19 @@ public class TicketsController : ControllerBase
         }
 
         var tickets = await _ticketService.GetUserTicketsAsync(username);
-
+    
         // Возвращаем полный формат как ожидает Gateway
         var response = tickets.Select(t => new
         {
             t.TicketUid,
             t.FlightNumber,
             FromAirport = "Unknown", // Gateway добавит правильные данные
-            ToAirport = "Unknown",   // Gateway добавит правильные данные
+            ToAirport = "Unknown",   // Gateway добавит правильные данные  
             Date = DateTime.MinValue, // Gateway добавит правильные данные
             t.Price,
             Status = t.Status.ToString()
         });
-
+    
         return Ok(response);
     }
 
@@ -57,19 +57,19 @@ public class TicketsController : ControllerBase
         try
         {
             var ticket = await _ticketService.CreateTicketAsync(request, username);
-
+        
             // Возвращаем полный ответ с TicketUid
             var response = new
             {
                 TicketUid = ticket.TicketUid,
                 FlightNumber = request.FlightNumber,
                 FromAirport = "Unknown",
-                ToAirport = "Unknown",
+                ToAirport = "Unknown", 
                 Date = DateTime.MinValue,
                 Price = request.Price,
                 Status = ticket.Status.ToString()
             };
-
+        
             return Ok(response);
         }
         catch (Exception ex)

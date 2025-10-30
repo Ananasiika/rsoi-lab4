@@ -1,8 +1,7 @@
-﻿using GatewayService.Models;
+﻿using System.ComponentModel.DataAnnotations;
+using GatewayService.Models;
 using GatewayService.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 
 namespace GatewayService.Controllers;
 
@@ -27,10 +26,22 @@ public class PrivilegeController : ControllerBase
             return BadRequest(new { message = "Username is required" });
         }
 
-        var response = await _gatewayService.GetPrivilegeInfoAsync(username);
-        var json = JsonSerializer.Serialize(response);
-        _logger.LogInformation(json);
+        try
+        {
+            var privilegeInfo = await _gatewayService.GetPrivilegeInfoAsync(username);
         
-        return response.IsSuccess ? Ok(response.Response) : StatusCode(503, new { message = "Bonus Service unavailable" });
+            // ВСЕГДА возвращаем 200, даже если пользователь новый
+            return Ok(privilegeInfo ?? new PrivilegeInfoResponse
+            {
+                Balance = 0,
+                Status = "BRONZE", 
+                History = new List<BalanceHistory>()
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting privilege info for: {Username}", username);
+            return StatusCode(500, new { message = "Internal server error" });
+        }
     }
 }

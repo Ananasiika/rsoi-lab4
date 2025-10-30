@@ -1,9 +1,10 @@
-﻿using FlightService.Controllers;
-using FlightService.Database;
-using FlightService.Models;
-using FlightService.Services;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using FlightService.Controllers;
+using FlightService.Models;
+using FlightService.Database;
+using FlightService.Services;
+using FlightService.Interfaces;
 
 namespace Tests;
 
@@ -16,10 +17,10 @@ public class FlightServiceTests : IDisposable
     public FlightServiceTests()
     {
         _context = DbHelper.CreateContext<FlightDatabaseContext>();
-
+        
         var flightService = new FlightService.Services.FlightService(_context);
         var airportService = new AirportService(_context);
-
+        
         _flightsController = new FlightsController(flightService);
         _airportsController = new AirportsController(airportService);
 
@@ -44,31 +45,32 @@ public class FlightServiceTests : IDisposable
         // Add flights
         var flights = new List<Flight>
         {
-            new() {
-                Id = 1,
-                FlightNumber = "FL123",
-                FromAirportId = 1,
-                ToAirportId = 2,
-                DateTime = DateTime.UtcNow.AddDays(1),
-                Price = 5000
+            new Flight 
+            { 
+                Id = 1, 
+                FlightNumber = "FL123", 
+                FromAirportId = 1, 
+                ToAirportId = 2, 
+                DateTime = DateTime.UtcNow.AddDays(1), 
+                Price = 5000 
             },
-            new()
-            {
-                Id = 2,
-                FlightNumber = "FL456",
-                FromAirportId = 2,
-                ToAirportId = 1,
-                DateTime = DateTime.UtcNow.AddDays(2),
-                Price = 4500
+            new Flight 
+            { 
+                Id = 2, 
+                FlightNumber = "FL456", 
+                FromAirportId = 2, 
+                ToAirportId = 1, 
+                DateTime = DateTime.UtcNow.AddDays(2), 
+                Price = 4500 
             },
-            new Flight
-            {
-                Id = 3,
-                FlightNumber = "FL789",
-                FromAirportId = 1,
-                ToAirportId = 3,
-                DateTime = DateTime.UtcNow.AddDays(3),
-                Price = 3000
+            new Flight 
+            { 
+                Id = 3, 
+                FlightNumber = "FL789", 
+                FromAirportId = 1, 
+                ToAirportId = 3, 
+                DateTime = DateTime.UtcNow.AddDays(3), 
+                Price = 3000 
             }
         };
 
@@ -86,13 +88,13 @@ public class FlightServiceTests : IDisposable
     public async Task CreateFlight_ValidFlight_ReturnsCreated()
     {
         // Arrange
-        var newFlight = new Flight
-        {
-            FlightNumber = "FL999",
-            FromAirportId = 1,
-            ToAirportId = 2,
-            DateTime = DateTime.UtcNow.AddDays(5),
-            Price = 6000
+        var newFlight = new Flight 
+        { 
+            FlightNumber = "FL999", 
+            FromAirportId = 1, 
+            ToAirportId = 2, 
+            DateTime = DateTime.UtcNow.AddDays(5), 
+            Price = 6000 
         };
 
         // Act
@@ -102,9 +104,9 @@ public class FlightServiceTests : IDisposable
         var actionResult = Assert.IsType<ActionResult<Flight>>(result);
         var createdAtResult = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
         var flight = Assert.IsType<Flight>(createdAtResult.Value);
-
+        
         Assert.Equal("FL999", flight.FlightNumber);
-
+        
         // Verify it was actually saved
         var savedFlight = await _context.Flights.FirstOrDefaultAsync(f => f.FlightNumber == "FL999");
         Assert.NotNull(savedFlight);
@@ -121,7 +123,7 @@ public class FlightServiceTests : IDisposable
         var actionResult = Assert.IsType<ActionResult<IEnumerable<Airport>>>(result);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
         var airports = Assert.IsType<List<Airport>>(okResult.Value);
-
+        
         Assert.Equal(3, airports.Count);
         Assert.Equal("Sheremetyevo", airports.First().Name);
     }
@@ -136,7 +138,7 @@ public class FlightServiceTests : IDisposable
         var actionResult = Assert.IsType<ActionResult<Airport>>(result);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
         var airport = Assert.IsType<Airport>(okResult.Value);
-
+        
         Assert.Equal(1, airport.Id);
         Assert.Equal("Sheremetyevo", airport.Name);
         Assert.Equal("Moscow", airport.City);
@@ -157,11 +159,11 @@ public class FlightServiceTests : IDisposable
     public async Task CreateAirport_ValidAirport_ReturnsCreated()
     {
         // Arrange
-        var newAirport = new Airport
-        {
-            Name = "Domodedovo",
-            City = "Moscow",
-            Country = "Russia"
+        var newAirport = new Airport 
+        { 
+            Name = "Domodedovo", 
+            City = "Moscow", 
+            Country = "Russia" 
         };
 
         // Act
@@ -171,9 +173,9 @@ public class FlightServiceTests : IDisposable
         var actionResult = Assert.IsType<ActionResult<Airport>>(result);
         var createdAtResult = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
         var airport = Assert.IsType<Airport>(createdAtResult.Value);
-
+        
         Assert.Equal("Domodedovo", airport.Name);
-
+        
         // Verify it was actually saved
         var savedAirport = await _context.Airports.FirstOrDefaultAsync(a => a.Name == "Domodedovo");
         Assert.NotNull(savedAirport);

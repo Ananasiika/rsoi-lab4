@@ -1,8 +1,10 @@
-﻿using GatewayService.Models;
+﻿using GatewayService.Dto;
+using GatewayService.Models;
 using GatewayService.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GatewayService.Controllers;
+
 
 [ApiController]
 [Route("api/v1/flights")]
@@ -20,21 +22,20 @@ public class FlightsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetFlights([FromQuery] int page = 1, [FromQuery] int size = 10)
     {
-        if (page < 1 || size < 1 || size > 100)
+        if (page < 0 || size < 1 || size > 100)
         {
-            return BadRequest(new { message = "Invalid page or size parameters" });
+            return BadRequest(new ErrorResponse { Message = "Invalid page or size parameters" });
         }
 
-        var response = await _gatewayService.GetFlightsAsync(page, size);
-        
-        if (response is { IsSuccess: true, Response: not null })
+        try
         {
+            var flights = await _gatewayService.GetFlightsAsync(page, size);
             var result = new PaginationResponse<FlightResponse>
             {
-                Page = response.Response.Page,
-                PageSize = response.Response.PageSize,
-                TotalElements = response.Response.TotalElements,
-                Items = response.Response.Items.Select(f => new FlightResponse
+                Page = flights.Page,
+                PageSize = flights.PageSize,
+                TotalElements = flights.TotalElements,
+                Items = flights.Items.Select(f => new FlightResponse
                 {
                     Date = f.Date,
                     FlightNumber = f.FlightNumber,
@@ -45,8 +46,10 @@ public class FlightsController : ControllerBase
             };
             return Ok(result);
         }
-        
-        var errorMessage = response.Error?.Message ?? "Service error";
-        return StatusCode(response.StatusCode, new { message = errorMessage });
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting flights");
+            return StatusCode(500, new ErrorResponse { Message = "Internal server error" });
+        }
     }
 }

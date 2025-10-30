@@ -1,6 +1,12 @@
-﻿using BonusService.Dto;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using BonusService.Controllers;
+using BonusService.Dto;
 using BonusService.Interfaces;
-using Microsoft.AspNetCore.Mvc;
+using BonusService.Models;
+using GatewayService.Controllers;
+using GatewayService.Models;
+using Moq;
 using PrivilegeController = BonusService.Controllers.PrivilegeController;
 
 namespace Tests;

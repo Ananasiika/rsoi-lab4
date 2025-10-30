@@ -1,7 +1,7 @@
-﻿using GatewayService.Models;
+﻿using System.ComponentModel.DataAnnotations;
+using GatewayService.Models;
 using GatewayService.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
 
 namespace GatewayService.Controllers;
 
@@ -23,43 +23,45 @@ public class TicketsController : ControllerBase
     {
         if (string.IsNullOrEmpty(username))
         {
-            return BadRequest(new { message = "Username is required" });
+            return BadRequest(new ErrorResponse { Message = "Username is required" });
         }
 
-        var response = await _gatewayService.GetUserTicketsAsync(username);
-        
-        if (response.IsSuccess)
+        try
         {
-            return Ok(response.Response);
+            var tickets = await _gatewayService.GetUserTicketsAsync(username);
+            return Ok(tickets);
         }
-        
-        var errorMessage = response.Error?.Message ?? "Service error";
-        return StatusCode(response.StatusCode, new { message = errorMessage });
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting tickets for user: {Username}", username);
+            return StatusCode(500, new ErrorResponse { Message = "Internal server error" });
+        }
     }
 
     [HttpGet("{ticketUid}")]
-    public async Task<IActionResult> GetTicket(
-        [FromHeader(Name = "X-User-Name")][Required] string username,
-        [FromRoute] Guid ticketUid)
+    public async Task<IActionResult> GetTicket([FromRoute][Required] Guid ticketUid,
+        [FromHeader(Name = "X-User-Name")][Required] string username)
     {
         if (string.IsNullOrEmpty(username))
         {
-            return BadRequest(new { message = "Username is required" });
+            return BadRequest(new ErrorResponse { Message = "Username is required" });
         }
 
-        var response = await _gatewayService.GetTicketAsync(username, ticketUid);
-        
-        if (response.IsSuccess)
+        try
         {
-            if (response.Response == null)
+            var ticket = await _gatewayService.GetTicketAsync(username, ticketUid);
+            if (ticket == null)
             {
-                return NotFound(new { message = "Ticket not found" });
+                return NotFound(new ErrorResponse { Message = "Ticket not found" });
             }
-            return Ok(response.Response);
+
+            return Ok(ticket);
         }
-        
-        var errorMessage = response.Error?.Message ?? "Service error";
-        return StatusCode(response.StatusCode, new { message = errorMessage });
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting ticket: {TicketUid} for user: {Username}", ticketUid, username);
+            return StatusCode(500, new ErrorResponse { Message = "Internal server error" });
+        }
     }
 
     [HttpPost]
@@ -69,42 +71,68 @@ public class TicketsController : ControllerBase
     {
         if (string.IsNullOrEmpty(username))
         {
-            return BadRequest(new { message = "Username is required" });
+            return BadRequest(new ValidationErrorResponse 
+            { 
+                Message = "Validation failed",
+                Errors = new List<ErrorDescription>
+                {
+                    new() { Field = "X-User-Name", Error = "Username is required" }
+                }
+            });
         }
 
-        var response = await _gatewayService.PurchaseTicketAsync(username, request);
-        
-        if (response.IsSuccess)
+        if (request.Price <= 0)
         {
-            if (response.Response == null)
-            {
-                return BadRequest(new { message = "Failed to purchase ticket" });
-            }
-            return Ok(response.Response);
+            return BadRequest(new ValidationErrorResponse 
+            { 
+                Message = "Validation failed",
+                Errors = new List<ErrorDescription>
+                {
+                    new() { Field = "price", Error = "Price must be positive" }
+                }
+            });
         }
-        
-        var errorMessage = response.Error?.Message ?? "Service error";
-        return StatusCode(response.StatusCode, new { message = errorMessage });
+
+        try
+        {
+            var response = await _gatewayService.PurchaseTicketAsync(username, request);
+            if (response == null)
+            {
+                return BadRequest(new ErrorResponse { Message = "Failed to purchase ticket" });
+            }
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error purchasing ticket for user: {Username}", username);
+            return StatusCode(500, new ErrorResponse { Message = "Internal server error" });
+        }
     }
 
     [HttpDelete("{ticketUid}")]
-    public async Task<IActionResult> CancelTicket(
-        [FromHeader(Name = "X-User-Name")][Required] string username,
-        [FromRoute] Guid ticketUid)
+    public async Task<IActionResult> CancelTicket([FromRoute][Required] Guid ticketUid,
+        [FromHeader(Name = "X-User-Name")][Required] string username)
     {
         if (string.IsNullOrEmpty(username))
         {
-            return BadRequest(new { message = "Username is required" });
+            return BadRequest(new ErrorResponse { Message = "Username is required" });
         }
 
-        var response = await _gatewayService.CancelTicketAsync(username, ticketUid);
-        
-        if (response.IsSuccess)
+        try
         {
+            var success = await _gatewayService.CancelTicketAsync(username, ticketUid);
+            if (!success)
+            {
+                return NotFound(new ErrorResponse { Message = "Ticket not found" });
+            }
+
             return NoContent();
         }
-        
-        var errorMessage = response.Error?.Message ?? "Service error";
-        return StatusCode(response.StatusCode, new { message = errorMessage });
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error canceling ticket: {TicketUid} for user: {Username}", ticketUid, username);
+            return StatusCode(500, new ErrorResponse { Message = "Internal server error" });
+        }
     }
 }

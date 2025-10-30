@@ -1,4 +1,3 @@
-using GatewayService;
 using GatewayService.HttpClients;
 using GatewayService.Services;
 
@@ -17,26 +16,23 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-builder.Services.AddSingleton<CircuitBreaker>();
-builder.Services.AddSingleton<IRetryQueue, RetryQueue>();
-builder.Services.AddHostedService<RetryQueue>(provider =>
-    (RetryQueue)provider.GetRequiredService<IRetryQueue>());
+// Register HTTP clients
 // Register HTTP clients
 builder.Services.AddHttpClient<IFlightClient, FlightClient>(client =>
 {
-    client.BaseAddress = new Uri("http://flights.ananasiika.svc.cluster.local:8060");
+    client.BaseAddress = new Uri(builder.Configuration["Services:FlightService"] ?? "http://flight_service:8060");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 builder.Services.AddHttpClient<IBonusClient, BonusClient>(client =>
 {
-    client.BaseAddress = new Uri("http://bonus.ananasiika.svc.cluster.local:8050" );
+    client.BaseAddress = new Uri(builder.Configuration["Services:BonusService"] ?? "http://bonus_service:8050");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 builder.Services.AddHttpClient<ITicketClient, TicketClient>(client =>
 {
-    client.BaseAddress = new Uri("http://tickets.ananasiika.svc.cluster.local:8070");
+    client.BaseAddress = new Uri(builder.Configuration["Services:TicketService"] ?? "http://ticket_service:8070");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 

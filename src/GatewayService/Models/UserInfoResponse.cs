@@ -10,5 +10,5 @@ public class UserPrivilegeInfo
 public class UserInfoResponse
 {
     public List<TicketResponse> Tickets { get; set; } = new();
-    public PrivilegeShortInfo Privilege { get; set; } = new();
+    public PrivilegeShortInfo Privilege { get; set; } = new(); 
 }

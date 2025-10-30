@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BonusService.Services;
 
-public class PrivilegeService : IPrivilegeService
+public class PrivilegeService: IPrivilegeService
 {
     private readonly BonusDatabaseContext _context;
 
@@ -61,7 +61,7 @@ public class PrivilegeService : IPrivilegeService
         return privilege;
     }
 
-    public async Task<PrivilegeHistory> AddPrivilegeHistoryAsync(int privilegeId, Guid ticketUid,
+    public async Task<PrivilegeHistory> AddPrivilegeHistoryAsync(int privilegeId, Guid ticketUid, 
         int balanceDiff, string operationType)
     {
         var history = new PrivilegeHistory
@@ -84,11 +84,11 @@ public class PrivilegeService : IPrivilegeService
         // 10% от стоимости билета
         return Task.FromResult((int)(ticketPrice * 0.1));
     }
-
+    
     public async Task ProcessPurchaseAsync(string username, PurchaseUpdateRequest request)
     {
         var privilege = await GetOrCreatePrivilegeAsync(username);
-
+        
         if (request.PaidFromBalance)
         {
             // Списание бонусов при оплате
@@ -116,7 +116,7 @@ public class PrivilegeService : IPrivilegeService
     public async Task ProcessCancelAsync(string username, CancelUpdateRequest request)
     {
         var privilege = await GetOrCreatePrivilegeAsync(username);
-
+        
         // Ищем историю операций по этому билету
         var purchaseHistory = await _context.PrivilegeHistories
             .Where(ph => ph.PrivilegeId == privilege.Id && ph.TicketUid == request.TicketUid)
@@ -157,7 +157,7 @@ public class PrivilegeService : IPrivilegeService
 
             // Обновляем статус при изменении баланса
             UpdatePrivilegeStatus(privilege);
-
+            
             await _context.SaveChangesAsync();
         }
     }
