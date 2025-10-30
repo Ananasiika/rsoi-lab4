@@ -90,6 +90,62 @@ jobs:
           helm delete services --namespace ananasiika --ignore-not-found
           helm install -n ananasiika services ./services
 
+      - name: Enable Ingress in Minikube
+        run: |
+          minikube addons enable ingress
+          
+          # Ждем готовности Ingress Controller
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=300s
+
+      - name: Wait for Ingress Webhook
+        run: |
+          # Ждем готовности admission webhook
+          echo "Waiting for ingress admission webhook..."
+          until kubectl get svc -n ingress-nginx ingress-nginx-controller-admission 2>/dev/null; do
+            echo "Waiting for admission service..."
+            sleep 5
+          done
+          
+          # Проверяем что порт доступен
+          until kubectl exec -n ingress-nginx deployment/ingress-nginx-controller -- \
+            netstat -tuln | grep -q 443; do
+            echo "Waiting for admission webhook port..."
+            sleep 5
+          done
+          
+          sleep 10
+
+      - name: Deploy Ingress
+        run: |
+          kubectl apply -f k8s/ingress.yaml
+
+      - name: Setup Minikube Tunnel and Get IP
+        run: |
+          # Запускаем tunnel в фоне
+          minikube tunnel &
+          TUNNEL_PID=$!
+          echo "TUNNEL_PID=$TUNNEL_PID" >> $GITHUB_ENV
+          
+          # Ждем запуска tunnel
+          sleep 30
+          
+          # Получаем IP Minikube
+          MINIKUBE_IP=$(minikube ip)
+          echo "MINIKUBE_IP=$MINIKUBE_IP" >> $GITHUB_ENV
+          echo "Minikube IP: $MINIKUBE_IP"
+          
+          # Проверяем Ingress
+          kubectl get ingress -n ananasiika -o wide
+
+      - name: Wait for Services
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '60s'
+
+      
       - name: Create Missing Databases Immediately
         run: |
           echo "=== Creating missing databases manually ==="
@@ -160,61 +216,6 @@ jobs:
           echo "=== Final database list ==="
           kubectl exec -n ananasiika deployment/postgres -- \
             psql -U postgres -l
-
-      - name: Enable Ingress in Minikube
-        run: |
-          minikube addons enable ingress
-          
-          # Ждем готовности Ingress Controller
-          kubectl wait --namespace ingress-nginx \
-            --for=condition=ready pod \
-            --selector=app.kubernetes.io/component=controller \
-            --timeout=300s
-
-      - name: Wait for Ingress Webhook
-        run: |
-          # Ждем готовности admission webhook
-          echo "Waiting for ingress admission webhook..."
-          until kubectl get svc -n ingress-nginx ingress-nginx-controller-admission 2>/dev/null; do
-            echo "Waiting for admission service..."
-            sleep 5
-          done
-          
-          # Проверяем что порт доступен
-          until kubectl exec -n ingress-nginx deployment/ingress-nginx-controller -- \
-            netstat -tuln | grep -q 443; do
-            echo "Waiting for admission webhook port..."
-            sleep 5
-          done
-          
-          sleep 10
-
-      - name: Deploy Ingress
-        run: |
-          kubectl apply -f k8s/ingress.yaml
-
-      - name: Setup Minikube Tunnel and Get IP
-        run: |
-          # Запускаем tunnel в фоне
-          minikube tunnel &
-          TUNNEL_PID=$!
-          echo "TUNNEL_PID=$TUNNEL_PID" >> $GITHUB_ENV
-          
-          # Ждем запуска tunnel
-          sleep 30
-          
-          # Получаем IP Minikube
-          MINIKUBE_IP=$(minikube ip)
-          echo "MINIKUBE_IP=$MINIKUBE_IP" >> $GITHUB_ENV
-          echo "Minikube IP: $MINIKUBE_IP"
-          
-          # Проверяем Ingress
-          kubectl get ingress -n ananasiika -o wide
-
-      - name: Wait for Services
-        uses: jakejarvis/wait-action@master
-        with:
-          time: '60s'
 
       - name: Debug Resources
         run: |
