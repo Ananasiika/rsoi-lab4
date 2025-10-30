@@ -4,18 +4,20 @@ metadata:
   name: "{{ .Chart.Name }}-init"
   namespace: {{ .Values.namespace }}
 data:
-  init.sql: |
+  01-create-databases.sql: |
     CREATE DATABASE tickets;
     CREATE DATABASE flights; 
     CREATE DATABASE privileges;
-    -- Даем права
+    
     GRANT ALL PRIVILEGES ON DATABASE tickets TO program;
     GRANT ALL PRIVILEGES ON DATABASE flights TO program;
     GRANT ALL PRIVILEGES ON DATABASE privileges TO program;
 
+  02-tickets-schema.sql: |
     \c tickets;
     GRANT ALL ON SCHEMA public TO program;
     ALTER SCHEMA public OWNER TO program;
+    
     CREATE TABLE ticket
     (
         id            SERIAL PRIMARY KEY,
@@ -28,9 +30,11 @@ data:
     );
     ALTER TABLE ticket OWNER TO program;
 
+  03-flights-schema.sql: |
     \c flights;
     GRANT ALL ON SCHEMA public TO program;
     ALTER SCHEMA public OWNER TO program;
+    
     CREATE TABLE airport
     (
         id      SERIAL PRIMARY KEY,
@@ -38,6 +42,7 @@ data:
         city    VARCHAR(255),
         country VARCHAR(255)
     );
+    ALTER TABLE airport OWNER TO program;
 
     CREATE TABLE flight
     (
@@ -48,21 +53,20 @@ data:
         to_airport_id   INT REFERENCES airport (id),
         price           INT                      NOT NULL
     );
-
-    ALTER TABLE airport OWNER TO program;
     ALTER TABLE flight OWNER TO program;
 
-    INSERT INTO public.airport(id, name, city, country) VALUES 
+    INSERT INTO airport(id, name, city, country) VALUES 
     (1, 'Шереметьево', 'Москва', 'Россия'),
     (2, 'Пулково', 'Санкт-Петербург', 'Россия');
 
-    INSERT INTO public.flight(
-        id, flight_number, datetime, from_airport_id, to_airport_id, price)
-        VALUES (1, 'AFL031', '2021-10-08 20:00', 2, 1, 1500);
+    INSERT INTO flight(id, flight_number, datetime, from_airport_id, to_airport_id, price)
+    VALUES (1, 'AFL031', '2021-10-08 20:00', 2, 1, 1500);
 
+  04-privileges-schema.sql: |
     \c privileges;
     GRANT ALL ON SCHEMA public TO program;
     ALTER SCHEMA public OWNER TO program;
+    
     CREATE TABLE privilege
     (
         id       SERIAL PRIMARY KEY,
@@ -71,6 +75,7 @@ data:
             CHECK (status IN ('BRONZE', 'SILVER', 'GOLD')),
         balance  INT
     );
+    ALTER TABLE privilege OWNER TO program;
 
     CREATE TABLE privilege_history
     (
@@ -82,5 +87,4 @@ data:
         operation_type VARCHAR(20) NOT NULL
             CHECK (operation_type IN ('FILL_IN_BALANCE', 'DEBIT_THE_ACCOUNT'))
     );
-    ALTER TABLE privilege OWNER TO program;
     ALTER TABLE privilege_history OWNER TO program;
