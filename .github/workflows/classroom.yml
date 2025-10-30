@@ -176,6 +176,28 @@ jobs:
           delayRequest: 100
           reporters: '[ "cli" ]'
 
+      - name: Check Logs
+        if: always()
+        run: |
+          echo "=== Getting logs from ALL services ==="
+    
+          # Получаем все поды в неймспейсе
+          kubectl get pods -n ananasiika -o wide
+          
+          echo "================================================================================"
+          echo "=== LOGS BY SERVICE TYPE ==="
+          echo "================================================================================"
+          
+          SERVICES="gateway flights bonus tickets postgres"
+          
+          for service in $SERVICES; do
+            echo "--- Service: $service ---"
+            kubectl logs -n ananasiika -l app="$service" --prefix=true --tail=50 --all-containers=true 2>/dev/null || \
+            kubectl logs -n ananasiika -l app.kubernetes.io/name="$service" --prefix=true --tail=50 --all-containers=true 2>/dev/null || \
+            echo "No logs found for service: $service"
+            echo ""
+          done
+
       - name: Cleanup Tunnel
         if: always()
         run: |
