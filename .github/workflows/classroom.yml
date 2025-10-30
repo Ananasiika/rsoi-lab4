@@ -247,6 +247,26 @@ jobs:
               curl -v http://tickets.ananasiika.svc.cluster.local:8070/manage/health || echo "Tickets failed"
             '
 
+      - name: Test Full DNS Names
+        run: |
+          echo "🔍 Testing full DNS name resolution..."
+          
+          for pod in $(kubectl get pods -n ananasiika -o jsonpath='{.items[*].metadata.name}'); do
+            if [[ $pod != *"postgres"* ]]; then
+              echo "--- DNS resolution test from $pod ---"
+              kubectl exec -n ananasiika $pod -- sh -c "
+                echo 'Testing postgres.ananasiika.svc.cluster.local...'
+                nslookup postgres.ananasiika.svc.cluster.local || echo 'Full DNS failed'
+                echo 'Testing short name postgres...'
+                nslookup postgres || echo 'Short name failed'
+                echo 'Testing service IP connectivity...'
+                nc -zv postgres.ananasiika.svc.cluster.local 5432 && echo '✅ Full DNS connection successful' || echo '❌ Full DNS connection failed'
+                nc -zv postgres 5432 && echo '✅ Short name connection successful' || echo '❌ Short name connection failed'
+              " || echo "Cannot test from $pod"
+              echo ""
+            fi
+          done
+
       - name: Test External Access (для Postman - используйте этот)
         run: |
           # Эти должны работать для Postman тестов
