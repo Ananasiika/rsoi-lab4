@@ -85,24 +85,81 @@ jobs:
           
           cd k8s
           helm delete postgres --namespace ananasiika --ignore-not-found
-          kubectl delete pvc -n ananasiika postgres-pvc --ignore-not-found
-          
-          # Ждем
-          sleep 10
-          
-          # Переустанавливаем
           helm install -n ananasiika postgres ./postgres
-          
-          # Ждем инициализации
-          sleep 30
-          
-          # Проверяем все базы
-          echo "=== Checking all databases ==="
-          kubectl exec -n ananasiika deployment/postgres -- \
-            psql -U postgres -l
           
           helm delete services --namespace ananasiika --ignore-not-found
           helm install -n ananasiika services ./services
+
+      - name: Create Missing Databases Immediately
+        run: |
+          echo "=== Creating missing databases manually ==="
+          
+          # Создаем flights базу
+          kubectl exec -n ananasiika deployment/postgres -- \
+            psql -U postgres -c "CREATE DATABASE flights; GRANT ALL PRIVILEGES ON DATABASE flights TO program;"
+          
+          # Создаем privileges базу
+          kubectl exec -n ananasiika deployment/postgres -- \
+            psql -U postgres -c "CREATE DATABASE privileges; GRANT ALL PRIVILEGES ON DATABASE privileges TO program;"
+          
+          # Создаем таблицы в flights
+          kubectl exec -n ananasiika deployment/postgres -- \
+            psql -U program -d flights -c "
+              CREATE TABLE airport
+              (
+                  id      SERIAL PRIMARY KEY,
+                  name    VARCHAR(255),
+                  city    VARCHAR(255),
+                  country VARCHAR(255)
+              );
+              
+              CREATE TABLE flight
+              (
+                  id              SERIAL PRIMARY KEY,
+                  flight_number   VARCHAR(20)              NOT NULL,
+                  datetime        TIMESTAMP WITH TIME ZONE NOT NULL,
+                  from_airport_id INT REFERENCES airport (id),
+                  to_airport_id   INT REFERENCES airport (id),
+                  price           INT                      NOT NULL
+              );
+              
+              INSERT INTO public.airport(id, name, city, country) VALUES 
+              (1, 'Шереметьево', 'Москва', 'Россия'),
+              (2, 'Пулково', 'Санкт-Петербург', 'Россия');
+              
+              INSERT INTO public.flight(
+                  id, flight_number, datetime, from_airport_id, to_airport_id, price)
+                  VALUES (1, 'AFL031', '2021-10-08 20:00', 2, 1, 1500);
+            "
+          
+          # Создаем таблицы в privileges
+          kubectl exec -n ananasiika deployment/postgres -- \
+            psql -U program -d privileges -c "
+              CREATE TABLE privilege
+              (
+                  id       SERIAL PRIMARY KEY,
+                  username VARCHAR(80) NOT NULL UNIQUE,
+                  status   VARCHAR(80) NOT NULL DEFAULT 'BRONZE'
+                      CHECK (status IN ('BRONZE', 'SILVER', 'GOLD')),
+                  balance  INT
+              );
+              
+              CREATE TABLE privilege_history
+              (
+                  id             SERIAL PRIMARY KEY,
+                  privilege_id   INT REFERENCES privilege (id),
+                  ticket_uid     uuid        NOT NULL,
+                  datetime       TIMESTAMP   NOT NULL,
+                  balance_diff   INT         NOT NULL,
+                  operation_type VARCHAR(20) NOT NULL
+                      CHECK (operation_type IN ('FILL_IN_BALANCE', 'DEBIT_THE_ACCOUNT'))
+              );
+            "
+          
+          # Финальная проверка
+          echo "=== Final database list ==="
+          kubectl exec -n ananasiika deployment/postgres -- \
+            psql -U postgres -l
 
       - name: Enable Ingress in Minikube
         run: |
@@ -113,6 +170,24 @@ jobs:
             --for=condition=ready pod \
             --selector=app.kubernetes.io/component=controller \
             --timeout=300s
+
+      - name: Wait for Ingress Webhook
+        run: |
+          # Ждем готовности admission webhook
+          echo "Waiting for ingress admission webhook..."
+          until kubectl get svc -n ingress-nginx ingress-nginx-controller-admission 2>/dev/null; do
+            echo "Waiting for admission service..."
+            sleep 5
+          done
+          
+          # Проверяем что порт доступен
+          until kubectl exec -n ingress-nginx deployment/ingress-nginx-controller -- \
+            netstat -tuln | grep -q 443; do
+            echo "Waiting for admission webhook port..."
+            sleep 5
+          done
+          
+          sleep 10
 
       - name: Deploy Ingress
         run: |
