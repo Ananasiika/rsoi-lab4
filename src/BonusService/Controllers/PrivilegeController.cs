@@ -39,7 +39,7 @@ public class PrivilegeController : ControllerBase
             return StatusCode(500, $"Internal server error: {ex.Message}");
         }
     }
-    
+
     [HttpPost("purchase")]
     public async Task<IActionResult> UpdateAfterPurchase([FromHeader(Name = "X-User-Name")] string username, [FromBody] PurchaseUpdateRequest request)
     {

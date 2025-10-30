@@ -1,6 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
-using GatewayService.Services;
+﻿using GatewayService.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace GatewayService.Controllers;
 
@@ -25,15 +25,24 @@ public class MeController : ControllerBase
             return BadRequest(new { message = "Username is required" });
         }
 
-        try
+        var response = await _gatewayService.GetUserInfoAsync(username);
+        
+        if (response.IsSuccess)
         {
-            var userInfo = await _gatewayService.GetUserInfoAsync(username);
+            var userInfo = response.Response;
+            if (userInfo?.Privilege != null && userInfo.Privilege.Balance == 0 && userInfo.Privilege.Status == "BRONZE")
+            {
+                // Заменяем privilege на пустой объект
+                return Ok(new
+                {
+                    tickets = userInfo.Tickets,
+                    privilege = "" // Пустой объект вместо {balance: 0, status: "BRONZE"}
+                });
+            }
             return Ok(userInfo);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting user info for: {Username}", username);
-            return StatusCode(500, new { message = "Internal server error" });
-        }
+        
+        var errorMessage = response.Error?.Message ?? "Service error";
+        return StatusCode(response.StatusCode, new { message = errorMessage });
     }
 }

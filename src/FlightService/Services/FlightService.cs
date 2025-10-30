@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FlightService.Services;
 
-public class FlightService: IFlightService
+public class FlightService : IFlightService
 {
     private readonly FlightDatabaseContext _context;
 
@@ -31,10 +31,12 @@ public class FlightService: IFlightService
             .Include(f => f.ToAirport)
             .FirstOrDefaultAsync(f => f.Id == id);
     }
+
     public async Task<int> GetTotalCountAsync()
     {
         return await _context.Flights.CountAsync();
     }
+
     public async Task<Flight?> GetFlightByNumberAsync(string flightNumber)
     {
         return await _context.Flights

@@ -1,10 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TicketService.Controllers;
+using TicketService.Database;
 using TicketService.Dto;
 using TicketService.Models;
-using TicketService.Database;
-using TicketService.Services;
 
 namespace Tests;
 
@@ -30,32 +29,30 @@ public class TicketServiceTests : IDisposable
 
         var tickets = new List<Ticket>
         {
-            new Ticket 
-            { 
-                Id = 1, 
-                TicketUid = Guid.NewGuid(), 
-                FlightNumber = "FL123", 
-                Price = 5000, 
-                Status = TicketStatus.PAID, 
-                Username = "user1" 
+            new Ticket
+            {
+                Id = 1,
+                TicketUid = Guid.NewGuid(),
+                FlightNumber = "FL123",
+                Price = 5000,
+                Status = TicketStatus.PAID,
+                Username = "user1"
             },
-            new Ticket 
-            { 
-                Id = 2, 
-                TicketUid = Guid.NewGuid(), 
-                FlightNumber = "FL456", 
-                Price = 4500, 
-                Status = TicketStatus.PAID, 
-                Username = "user1" 
+            new() {
+                Id = 2,
+                TicketUid = Guid.NewGuid(),
+                FlightNumber = "FL456",
+                Price = 4500,
+                Status = TicketStatus.PAID,
+                Username = "user1"
             },
-            new Ticket 
-            { 
-                Id = 3, 
-                TicketUid = Guid.NewGuid(), 
-                FlightNumber = "FL789", 
-                Price = 6000, 
-                Status = TicketStatus.PAID, 
-                Username = "user2" 
+            new() {
+                Id = 3,
+                TicketUid = Guid.NewGuid(),
+                FlightNumber = "FL789",
+                Price = 6000,
+                Status = TicketStatus.PAID,
+                Username = "user2"
             }
         };
 
@@ -93,13 +90,13 @@ public class TicketServiceTests : IDisposable
         // Assert
         var actionResult = Assert.IsType<OkObjectResult>(result);
         var ticket = actionResult.Value;
-        
+
         Assert.NotNull(ticket);
-        
+
         // Check ticket properties using reflection
         var flightNumberProperty = ticket.GetType().GetProperty("FlightNumber");
         var priceProperty = ticket.GetType().GetProperty("Price");
-        
+
         Assert.Equal(existingTicket.FlightNumber, flightNumberProperty?.GetValue(ticket)?.ToString());
         Assert.Equal(existingTicket.Price, (int?)priceProperty?.GetValue(ticket));
     }
@@ -136,20 +133,20 @@ public class TicketServiceTests : IDisposable
         // Assert
         var actionResult = Assert.IsType<OkObjectResult>(result);
         var ticket = actionResult.Value;
-        
+
         Assert.NotNull(ticket);
-        
+
         // Check ticket properties using reflection
         var flightNumberProperty = ticket.GetType().GetProperty("FlightNumber");
         var priceProperty = ticket.GetType().GetProperty("Price");
         var statusProperty = ticket.GetType().GetProperty("Status");
-        
+
         Assert.Equal("FL999", flightNumberProperty?.GetValue(ticket)?.ToString());
         Assert.Equal(7000, (int?)priceProperty?.GetValue(ticket));
         Assert.Equal("PAID", statusProperty?.GetValue(ticket)?.ToString());
 
         // Verify ticket was created
-        var createdTicket = await _context.Tickets.FirstOrDefaultAsync(t => 
+        var createdTicket = await _context.Tickets.FirstOrDefaultAsync(t =>
             t.Username == username && t.FlightNumber == "FL999");
         Assert.NotNull(createdTicket);
         Assert.Equal(7000, createdTicket.Price);

@@ -14,6 +14,7 @@ public class FlightsController : ControllerBase
     {
         _flightService = flightService;
     }
+
     [HttpGet("manage/health")]
     public IActionResult Health()
     {
@@ -30,17 +31,17 @@ public class FlightsController : ControllerBase
 
         var flights = await _flightService.GetAllFlightsAsync(page, size);
         var totalCount = await _flightService.GetTotalCountAsync();
-    
+
         // Преобразуем Flight в FlightDto
         var flightDtos = flights.Select(f => new FlightDto
         {
             FlightNumber = f.FlightNumber,
             FromAirport = f.FromAirport,
-            ToAirport = f.ToAirport, 
+            ToAirport = f.ToAirport,
             Date = f.DateTime,
             Price = f.Price
         }).ToList();
-    
+
         var response = new PaginationResponse<FlightDto>
         {
             Page = page,
@@ -48,7 +49,7 @@ public class FlightsController : ControllerBase
             TotalElements = totalCount, // Измените на TotalElements
             Items = flightDtos
         };
-    
+
         return Ok(response);
     }
 
@@ -60,7 +61,7 @@ public class FlightsController : ControllerBase
         {
             return NotFound();
         }
-    
+
         var flightDto = new FlightDto
         {
             FlightNumber = flight.FlightNumber,
@@ -69,7 +70,7 @@ public class FlightsController : ControllerBase
             Date = flight.DateTime,
             Price = flight.Price
         };
-    
+
         return Ok(flightDto);
     }
 

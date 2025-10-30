@@ -10,7 +10,6 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-
 builder.Services.AddDbContext<BonusDatabaseContext>(opt =>
             opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")),
                 ServiceLifetime.Transient, ServiceLifetime.Transient);
@@ -24,8 +23,8 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())
 //{
-    app.UseSwagger();
-    app.UseSwaggerUI();
+app.UseSwagger();
+app.UseSwaggerUI();
 //}
 
 app.UseAuthorization();
