@@ -5,9 +5,9 @@ bonus:
     image: ananasiika/bonus-service:latest
     env:
       DATA_BASE_PORT: 5432
-      DATA_BASE_NAME: postgres
-      DATA_BASE_USER: postgres
-      DATA_BASE_PASS: postgres
+      DATA_BASE_NAME: privileges
+      DATA_BASE_USER: program
+      DATA_BASE_PASS: test
       DATA_BASE_HOST: postgres
 
 tickets:
@@ -17,9 +17,9 @@ tickets:
     image: ananasiika/ticket-service:latest
     env:
       DATA_BASE_PORT: 5432
-      DATA_BASE_NAME: postgres
-      DATA_BASE_USER: postgres
-      DATA_BASE_PASS: postgres
+      DATA_BASE_NAME: tickets
+      DATA_BASE_USER: program
+      DATA_BASE_PASS: test
       DATA_BASE_HOST: postgres
 
 flights:
@@ -29,9 +29,9 @@ flights:
     image: ananasiika/flight-service:latest
     env:
       DATA_BASE_PORT: 5432
-      DATA_BASE_NAME: postgres
-      DATA_BASE_USER: postgres
-      DATA_BASE_PASS: postgres
+      DATA_BASE_NAME: flights
+      DATA_BASE_USER: program
+      DATA_BASE_PASS: test
       DATA_BASE_HOST: postgres
 
 gateway:

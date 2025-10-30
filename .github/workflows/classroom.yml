@@ -176,6 +176,29 @@ jobs:
           delayRequest: 100
           reporters: '[ "cli" ]'
 
+      - name: PostgreSQL Check
+        run: |
+          echo "=== Immediate PostgreSQL Status ==="
+          
+          # Проверяем все компоненты
+          kubectl get all,pvc,configmap -n ananasiika | grep postgres
+          
+          # Подробные логи
+          POD_NAME=$(kubectl get pods -n ananasiika -l app=postgres -o jsonpath='{.items[0].metadata.name}')
+          if [ -n "$POD_NAME" ]; then
+            echo "=== Pod $POD_NAME logs ==="
+            kubectl logs -n ananasiika $POD_NAME --tail=100
+            
+            echo "=== Checking init scripts ==="
+            kubectl exec -n ananasiika $POD_NAME -- ls -la /docker-entrypoint-initdb.d/
+            
+            echo "=== Checking database ==="
+            kubectl exec -n ananasiika $POD_NAME -- \
+              psql -U postgres -l || echo "Cannot list databases"
+          else
+            echo "❌ PostgreSQL pod not found"
+          fi
+
       - name: Check Logs
         if: always()
         run: |
