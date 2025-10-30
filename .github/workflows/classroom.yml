@@ -259,14 +259,11 @@ jobs:
           
           echo "✅ Bonus service stop/start test completed"
             
-      - name: Run API Tests
-        uses: matt-ball/newman-action@master
-        with:
-          collection: v1/postman/collection.json
-          environment: v1/postman/environment.json
-          delayRequest: 100
-          reporters: '[ "cli" ]'
-
+      - name: Run Test Script
+        run: |
+          echo "=== Running test script ==="
+          chmod +x ./scripts/test-script.sh
+          ./scripts/test-script.sh v1 bonus ananasiika
       - name: Check Logs
         if: always()
         run: |
