@@ -4,10 +4,14 @@ metadata:
   name: "{{ .Chart.Name }}-init"
   namespace: {{ .Values.namespace }}
 data:
+  00-init-user.sql: |
+    CREATE USER program WITH PASSWORD 'test';
+    ALTER USER program CREATEDB;
+    
   01-create-databases.sql: |
-    CREATE DATABASE tickets;
-    CREATE DATABASE flights; 
-    CREATE DATABASE privileges;
+    CREATE DATABASE tickets OWNER program;
+    CREATE DATABASE flights OWNER program;
+    CREATE DATABASE privileges OWNER program;
     
     GRANT ALL PRIVILEGES ON DATABASE tickets TO program;
     GRANT ALL PRIVILEGES ON DATABASE flights TO program;
@@ -15,10 +19,7 @@ data:
 
   02-tickets-schema.sql: |
     \c tickets;
-    GRANT ALL ON SCHEMA public TO program;
-    ALTER SCHEMA public OWNER TO program;
-    
-    CREATE TABLE ticket
+    CREATE TABLE IF NOT EXISTS ticket
     (
         id            SERIAL PRIMARY KEY,
         ticket_uid    uuid UNIQUE NOT NULL,
@@ -32,10 +33,7 @@ data:
 
   03-flights-schema.sql: |
     \c flights;
-    GRANT ALL ON SCHEMA public TO program;
-    ALTER SCHEMA public OWNER TO program;
-    
-    CREATE TABLE airport
+    CREATE TABLE IF NOT EXISTS airport
     (
         id      SERIAL PRIMARY KEY,
         name    VARCHAR(255),
@@ -44,7 +42,7 @@ data:
     );
     ALTER TABLE airport OWNER TO program;
 
-    CREATE TABLE flight
+    CREATE TABLE IF NOT EXISTS flight
     (
         id              SERIAL PRIMARY KEY,
         flight_number   VARCHAR(20)              NOT NULL,
@@ -57,17 +55,16 @@ data:
 
     INSERT INTO airport(id, name, city, country) VALUES 
     (1, 'Шереметьево', 'Москва', 'Россия'),
-    (2, 'Пулково', 'Санкт-Петербург', 'Россия');
+    (2, 'Пулково', 'Санкт-Петербург', 'Россия')
+    ON CONFLICT (id) DO NOTHING;
 
     INSERT INTO flight(id, flight_number, datetime, from_airport_id, to_airport_id, price)
-    VALUES (1, 'AFL031', '2021-10-08 20:00', 2, 1, 1500);
+    VALUES (1, 'AFL031', '2021-10-08 20:00', 2, 1, 1500)
+    ON CONFLICT (id) DO NOTHING;
 
   04-privileges-schema.sql: |
     \c privileges;
-    GRANT ALL ON SCHEMA public TO program;
-    ALTER SCHEMA public OWNER TO program;
-    
-    CREATE TABLE privilege
+    CREATE TABLE IF NOT EXISTS privilege
     (
         id       SERIAL PRIMARY KEY,
         username VARCHAR(80) NOT NULL UNIQUE,
@@ -77,7 +74,7 @@ data:
     );
     ALTER TABLE privilege OWNER TO program;
 
-    CREATE TABLE privilege_history
+    CREATE TABLE IF NOT EXISTS privilege_history
     (
         id             SERIAL PRIMARY KEY,
         privilege_id   INT REFERENCES privilege (id),

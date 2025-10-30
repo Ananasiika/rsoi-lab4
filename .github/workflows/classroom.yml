@@ -145,6 +145,20 @@ jobs:
         with:
           time: '60s'
 
+      - name: Initialize Databases
+        run: |
+          echo "Waiting for PostgreSQL to be ready..."
+          kubectl wait --namespace ananasiika --for=condition=ready pod -l app=postgres --timeout=300s
+          
+          echo "Initialize databases and schemas..."
+          # Execute initialization scripts in order
+          for script in 00-init-user.sql 01-create-databases.sql 02-tickets-schema.sql 03-flights-schema.sql 04-privileges-schema.sql; do
+            echo "Executing $script..."
+            kubectl exec -n ananasiika deployment/postgres -- \
+              psql -U postgres -f /docker-entrypoint-initdb.d/$script
+          done
+    
+          echo "Database initialization completed"
       
       - name: Check database
         run: |
