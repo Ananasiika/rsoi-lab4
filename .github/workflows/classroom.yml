@@ -153,7 +153,7 @@ jobs:
             --target-port=5432 \
             --name=postgres
           
-          echo "✅ PostgreSQL service created"
+          echo "PostgreSQL service created"
           
           sleep 5
           
@@ -172,73 +172,6 @@ jobs:
     
           echo "Database initialization completed"
       
-      - name: Check database
-        run: |
-          echo "📊 1. List of all databases:"
-          kubectl exec -n ananasiika deployment/postgres -- \
-            psql -U postgres -l
-          
-          echo ""
-          echo "🔍 2. Detailed info for each database:"
-          
-          # Проверяем tickets базу
-          echo "--- TICKETS DATABASE ---"
-          kubectl exec -n ananasiika deployment/postgres -- \
-            psql -U program -d tickets -c "\dt" 2>/dev/null || echo "Cannot access tickets database"
-          
-          echo "Tables content:"
-          kubectl exec -n ananasiika deployment/postgres -- \
-            psql -U program -d tickets -c "SELECT * FROM ticket;" 2>/dev/null || echo "No data in ticket table"
-          
-          # Проверяем flights базу  
-          echo ""
-          echo "--- FLIGHTS DATABASE ---"
-          kubectl exec -n ananasiika deployment/postgres -- \
-            psql -U program -d flights -c "\dt" 2>/dev/null || echo "Cannot access flights database"
-          
-          echo "Airports:"
-          kubectl exec -n ananasiika deployment/postgres -- \
-            psql -U program -d flights -c "SELECT * FROM airport;" 2>/dev/null || echo "No data in airport table"
-          
-          echo "Flights:"
-          kubectl exec -n ananasiika deployment/postgres -- \
-            psql -U program -d flights -c "SELECT * FROM flight;" 2>/dev/null || echo "No data in flight table"
-          
-          # Проверяем privileges базу
-          echo ""
-          echo "--- PRIVILEGES DATABASE ---"
-          kubectl exec -n ananasiika deployment/postgres -- \
-            psql -U program -d privileges -c "\dt" 2>/dev/null || echo "Cannot access privileges database"
-          
-          echo "Privileges:"
-          kubectl exec -n ananasiika deployment/postgres -- \
-            psql -U program -d privileges -c "SELECT * FROM privilege;" 2>/dev/null || echo "No data in privilege table"
-          
-          echo "Privilege history:"
-          kubectl exec -n ananasiika deployment/postgres -- \
-            psql -U program -d privileges -c "SELECT * FROM privilege_history;" 2>/dev/null || echo "No data in privilege_history table"
-
-      - name: Debug Resources
-        run: |
-          echo "=== All resources in namespace ananasiika ==="
-          kubectl get all -n ananasiika
-          
-          echo "=== Ingress details ==="
-          kubectl describe ingress gateway-ingress -n ananasiika
-          
-          echo "=== Services ==="
-          kubectl get svc -n ananasiika
-          
-          echo "=== Pods status ==="
-          kubectl get pods -n ananasiika -o wide
-          
-          echo "=== Ingress Controller logs ==="
-          kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=20
-
-          kubectl get endpoints -n ananasiika
-          kubectl describe svc -n ananasiika
-          kubectl get pods -n ananasiika -o wide
-            
       - name: Run Test Script
         run: |
           echo "=== Running test script ==="

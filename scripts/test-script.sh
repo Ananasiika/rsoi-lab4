@@ -41,15 +41,10 @@ step() {
   kubectl scale deployment "$deployment" -n "$namespace" --replicas "$replicas" 
 
   sleep 5
-  echo "📊 Current status:"
-  kubectl get deployment "$deployment" -n "$namespace" -o wide
-  echo "🐳 Pods:"
-  kubectl get pods -n "$namespace" -l service="$deployment" --no-headers 2>/dev/null || echo "No pods found"
-  
   # Ждем готовности при запуске
   if [[ $replicas -eq 1 ]]; then
     kubectl wait --for=condition=ready pod -l service="$deployment" -n "$namespace" --timeout=30s && \
-      echo "✅ Service ready" || echo "⚠️ Service may not be ready"
+      echo "Service ready" || echo "Service may not be ready"
   fi
   
   newman run \
