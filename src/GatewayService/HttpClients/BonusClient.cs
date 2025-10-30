@@ -61,6 +61,7 @@ public class BonusClient : IBonusClient
                         History = new List<BalanceHistory>()
                     });
                 }
+                _logger.LogError("Error while getting privilege info");
                 
                 return ServiceResponse<PrivilegeInfoResponse?>.ErrorResponse(
                     $"Failed to get privilege info: {response.StatusCode}", 
@@ -83,12 +84,7 @@ public class BonusClient : IBonusClient
             return ServiceResponse<PrivilegeShortInfo?>.Success(shortInfo);
         }
 
-        // Для некритичных операций возвращаем fallback
-        return ServiceResponse<PrivilegeShortInfo?>.Fallback(new PrivilegeShortInfo 
-        { 
-            Balance = 0, 
-            Status = "BRONZE" 
-        });
+        return ServiceResponse<PrivilegeShortInfo?>.ServiceUnavailable("Bonus");
     }
 
     public async Task<ServiceResponse<bool>> UpdatePrivilegeAfterPurchase(string username, TicketPurchaseRequest request, Guid ticketUid, int paidByBonuses, int paidByMoney, int bonusToAdd = 0)

@@ -2,6 +2,7 @@
 using GatewayService.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 
 namespace GatewayService.Controllers;
 
@@ -27,19 +28,9 @@ public class PrivilegeController : ControllerBase
         }
 
         var response = await _gatewayService.GetPrivilegeInfoAsync(username);
+        var json = JsonSerializer.Serialize(response);
+        _logger.LogInformation(json);
         
-        if (response.IsSuccess)
-        {
-            return Ok(response.Response);
-        }
-        
-        // Для /api/v1/privilege возвращаем 503 при недоступности BonusService
-        if (response.StatusCode == 503)
-        {
-            return StatusCode(503, new { message = "Bonus Service unavailable" });
-        }
-        
-        var errorMessage = response.Error?.Message ?? "Service error";
-        return StatusCode(response.StatusCode, new { message = errorMessage });
+        return response.IsSuccess ? Ok(response.Response) : StatusCode(503, new { message = "Bonus Service unavailable" });
     }
 }
