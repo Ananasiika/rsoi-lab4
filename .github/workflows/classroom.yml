@@ -247,23 +247,86 @@ jobs:
               curl -v http://tickets.ananasiika.svc.cluster.local:8070/manage/health || echo "Tickets failed"
             '
 
-      - name: Test Full DNS Names
+      - name: Check PostgreSQL Readiness
         run: |
-          echo "🔍 Testing full DNS name resolution..."
+          echo "🔍 Checking PostgreSQL readiness..."
           
+          # Проверяем что PostgreSQL слушает порт
+          kubectl exec -n ananasiika deployment/postgres -- netstat -tuln | grep 5432 && \
+          echo "✅ PostgreSQL is listening on port 5432" || \
+          echo "❌ PostgreSQL is not listening on port 5432"
+          
+          # Проверяем подключение изнутри PostgreSQL контейнера
+          kubectl exec -n ananasiika deployment/postgres -- pg_isready -U postgres && \
+          echo "✅ PostgreSQL is ready to accept connections" || \
+          echo "❌ PostgreSQL is not ready"
+          
+          # Проверяем базы данных
+          echo "📊 Available databases:"
+          kubectl exec -n ananasiika deployment/postgres -- psql -U postgres -c "\l" | grep -E "(tickets|flights|privileges)" || \
+          echo "No application databases found"
+
+      - name: Find PostgreSQL Addresses
+        run: |
+          echo "🔍 Finding PostgreSQL connection details..."
+          
+          # ClusterIP сервиса PostgreSQL
+          echo "=== PostgreSQL Service ==="
+          kubectl get svc -n ananasiika postgres -o wide
+          
+          # IP сервиса
+          POSTGRES_CLUSTER_IP=$(kubectl get svc -n ananasiika postgres -o jsonpath='{.spec.clusterIP}')
+          echo "PostgreSQL ClusterIP: $POSTGRES_CLUSTER_IP"
+          
+          # IP пода PostgreSQL
+          echo ""
+          echo "=== PostgreSQL Pod ==="
+          kubectl get pods -n ananasiika -l app=postgres -o wide
+          
+          POSTGRES_POD_IP=$(kubectl get pods -n ananasiika -l app=postgres -o jsonpath='{.items[0].status.podIP}')
+          echo "PostgreSQL PodIP: $POSTGRES_POD_IP"
+          
+          # Endpoints
+          echo ""
+          echo "=== PostgreSQL Endpoints ==="
+          kubectl get endpoints -n ananasiika postgres
+          
+          # Подробная информация о сервисе
+          echo ""
+          echo "=== PostgreSQL Service Details ==="
+          kubectl describe svc -n ananasiika postgres
+
+      - name: Test Direct IP Connectivity
+        run: |
+          echo "🔍 Testing direct IP connectivity to PostgreSQL..."
+          
+          # Получаем IP адреса
+          POSTGRES_CLUSTER_IP=$(kubectl get svc -n ananasiika postgres -o jsonpath='{.spec.clusterIP}')
+          POSTGRES_POD_IP=$(kubectl get pods -n ananasiika -l app=postgres -o jsonpath='{.items[0].status.podIP}')
+          
+          echo "PostgreSQL ClusterIP: $POSTGRES_CLUSTER_IP"
+          echo "PostgreSQL PodIP: $POSTGRES_POD_IP"
+          
+          # Тестируем подключение изнутри пода
+          echo ""
+          echo "--- Testing from inside PostgreSQL pod ---"
+          kubectl exec -n ananasiika deployment/postgres -- pg_isready -U postgres -h 127.0.0.1 && echo "✅ Localhost connection OK"
+          kubectl exec -n ananasiika deployment/postgres -- pg_isready -U postgres -h $POSTGRES_POD_IP && echo "✅ PodIP connection OK"
+          
+          # Тестируем из других подов
           for pod in $(kubectl get pods -n ananasiika -o jsonpath='{.items[*].metadata.name}'); do
             if [[ $pod != *"postgres"* ]]; then
-              echo "--- DNS resolution test from $pod ---"
-              kubectl exec -n ananasiika $pod -- sh -c "
-                echo 'Testing postgres.ananasiika.svc.cluster.local...'
-                nslookup postgres.ananasiika.svc.cluster.local || echo 'Full DNS failed'
-                echo 'Testing short name postgres...'
-                nslookup postgres || echo 'Short name failed'
-                echo 'Testing service IP connectivity...'
-                nc -zv postgres.ananasiika.svc.cluster.local 5432 && echo '✅ Full DNS connection successful' || echo '❌ Full DNS connection failed'
-                nc -zv postgres 5432 && echo '✅ Short name connection successful' || echo '❌ Short name connection failed'
-              " || echo "Cannot test from $pod"
               echo ""
+              echo "--- Testing from $pod ---"
+              
+              # Простой тест доступности порта
+              kubectl exec -n ananasiika $pod -- sh -c "
+                echo 'Testing ClusterIP $POSTGRES_CLUSTER_IP:5432...'
+                timeout 5 bash -c 'echo > /dev/tcp/$POSTGRES_CLUSTER_IP/5432' 2>/dev/null && echo '✅ ClusterIP:5432 reachable' || echo '❌ ClusterIP:5432 not reachable'
+                
+                echo 'Testing PodIP $POSTGRES_POD_IP:5432...'  
+                timeout 5 bash -c 'echo > /dev/tcp/$POSTGRES_POD_IP/5432' 2>/dev/null && echo '✅ PodIP:5432 reachable' || echo '❌ PodIP:5432 not reachable'
+              " || echo "Cannot test connectivity from $pod"
             fi
           done
 
