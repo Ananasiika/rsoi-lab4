@@ -266,21 +266,35 @@ jobs:
         if: always()
         run: |
           echo "=== Getting logs from ALL services ==="
-    
+          
           # Получаем все поды в неймспейсе
           kubectl get pods -n ananasiika -o wide
           
           echo "================================================================================"
-          echo "=== LOGS BY SERVICE TYPE ==="
+          echo "=== LOGS USING SERVICE LABEL ==="
           echo "================================================================================"
           
-          SERVICES="gateway flights bonus tickets postgres"
+          SERVICES="gateway flights bonus tickets"
           
           for service in $SERVICES; do
             echo "--- Service: $service ---"
-            kubectl logs -n ananasiika -l app="$service" --prefix=true --tail=50 --all-containers=true 2>/dev/null || \
-            kubectl logs -n ananasiika -l app.kubernetes.io/name="$service" --prefix=true --tail=50 --all-containers=true 2>/dev/null || \
+            kubectl logs -n ananasiika -l service="$service" --prefix=true --tail=100 2>/dev/null || \
             echo "No logs found for service: $service"
+            echo ""
+          done
+          
+          # Логи postgres отдельно
+          echo "--- Service: postgres ---"
+          kubectl logs -n ananasiika -l app=postgres --prefix=true --tail=100 2>/dev/null || \
+          echo "No logs found for postgres"
+          echo ""
+          
+          echo "=== Getting logs from ALL services ==="
+          
+          # Получаем логи для каждого пода по имени
+          for pod in $(kubectl get pods -n ananasiika -o jsonpath='{.items[*].metadata.name}'); do
+            echo "--- Pod: $pod ---"
+            kubectl logs -n ananasiika $pod --tail=100 --prefix=true
             echo ""
           done
 
