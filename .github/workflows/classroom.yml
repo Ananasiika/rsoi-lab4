@@ -89,6 +89,12 @@ jobs:
           
           helm delete tickets --namespace ananasiika --ignore-not-found
           helm install -n ananasiika tickets ./services
+          helm delete flights --namespace ananasiika --ignore-not-found
+          helm install -n ananasiika flights ./services
+          helm delete bonus --namespace ananasiika --ignore-not-found
+          helm install -n ananasiika bonus ./services
+          helm delete gateway --namespace ananasiika --ignore-not-found
+          helm install -n ananasiika gateway ./services
 
       - name: Enable Ingress in Minikube
         run: |
@@ -177,6 +183,7 @@ jobs:
           reporters: '[ "cli" ]'
 
       - name: PostgreSQL Check
+        if: always()
         run: |
           echo "=== Immediate PostgreSQL Status ==="
           
