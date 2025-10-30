@@ -3,7 +3,7 @@
     {
       "name": "Run Test Script",
       "setup": "export INGRESS_IP=$(minikube ip)",
-      "run": "./scripts/test-script.sh v1 bonus-service ananasiika",
+      "run": "./scripts/test-script.sh v1 bonus ananasiika",
       "input": "",
       "output": "",
       "comparison": "included",
