@@ -144,6 +144,28 @@ jobs:
         uses: jakejarvis/wait-action@master
         with:
           time: '60s'
+      - name: Create PostgreSQL Service
+        run: |
+          echo "🔧 Creating PostgreSQL service..."
+          
+          # Создаем сервис для PostgreSQL
+          kubectl expose deployment postgres -n ananasiika \
+            --port=5432 \
+            --target-port=5432 \
+            --name=postgres
+          
+          echo "✅ PostgreSQL service created"
+          
+          # Ждем создания сервиса
+          sleep 5
+          
+          # Проверяем сервис
+          echo "=== PostgreSQL Service ==="
+          kubectl get svc -n ananasiika postgres -o wide
+          
+          # Получаем IP сервиса
+          POSTGRES_IP=$(kubectl get svc -n ananasiika postgres -o jsonpath='{.spec.clusterIP}')
+          echo "PostgreSQL ClusterIP: $POSTGRES_IP"
 
       - name: Initialize Databases
         run: |
