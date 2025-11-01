@@ -172,6 +172,12 @@ jobs:
     
           echo "Database initialization completed"
       
+      - name: Check 
+        if: always()
+        run: |          
+          # Получаем все поды в неймспейсе
+          kubectl get pods -n ananasiika -o wide
+      
       - name: Run Test Script
         run: |
           echo "=== Running test script ==="
